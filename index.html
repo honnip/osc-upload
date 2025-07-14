@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>osc-upload</title>
+  <meta name="description" content="OsmChange Uploader for OpenStreetMap">
+  <style>
+    :root {
+      /* palette */
+      --green-1: #a5d6a7;
+      --green-2: #66bb6a;
+      --green-3: #4CAF50;
+      --blue-1: #7092FF;
+      --blue-2: #5f7cd9;
+
+      --border-radius: 8px;
+
+      /* light mode */
+      --text: #1f2328;
+      --app-background: #f6f8fa;
+      --textarea-color: #1f2328;
+      --textarea-background: #f6f8fa;
+      --border-color: #3d444db3;
+      --btn-text: #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text: rgb(209, 215, 224);
+        --background: #2a313c;
+        --app-background: #212830;
+        --textarea-color: #d1d7e0;
+        --textarea-background: #262c36;
+        --border-color: #3d444db3;
+        --btn-text: #212830;
+      }
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    * {
+      margin: 0;
+    }
+
+    input,
+    button,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      overflow-wrap: break-word;
+    }
+
+    p {
+      text-wrap: pretty;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      text-wrap: balance;
+    }
+
+    a {
+      color: var(--blue-1);
+      text-decoration: none;
+    }
+
+    code {
+      background-color: #818b981f;
+      font-size: 0.9rem;
+    }
+
+    body {
+      font-family: sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: var(--text);
+      line-height: 1.5;
+      background-color: var(--background);
+      padding: 2rem;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 60rem;
+      padding: 2rem;
+      background-color: var(--app-background);
+      border-color: var(--border-color);
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 1.5rem;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+
+    .login.section {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .userinfo {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #server {
+      margin-right: 0.5rem;
+      padding: 12px 20px;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px 20px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--btn-text);
+      background-color: var(--green-2);
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    button:hover {
+      background-color: var(--green-3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    button:disabled {
+      background-color: var(--green-1);
+      cursor: not-allowed;
+    }
+
+    button img {
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    #logout {
+      font-size: 1rem;
+      width: auto;
+    }
+
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      border: 2px dashed #ccc;
+      border-radius: var(--border-radius);
+      background-color: #fafafa;
+      cursor: pointer;
+    }
+
+    input[type="file"]:hover {
+      border-color: var(--green-1);
+    }
+
+    textarea {
+      width: 100%;
+      background-color: var(--textarea-background);
+      color: var(--textarea-color);
+      resize: vertical;
+      margin-top: 0.3rem;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
+    }
+
+    footer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="app">
+    <h1>OsmChange Uploader</h1>
+
+    <!-- Pre authentication -->
+    <div id="preAuth">
+      <div class="section">
+        <p>Upload <a href="https://wiki.openstreetmap.org/wiki/OsmChange" target="_blank">OsmChange</a> easily</p>
+      </div>
+      <div class="section login">
+        <select id="server" aria-label="Select OpenStreetMap server">
+          <option value="production">Production</option>
+          <option value="test">Test</option>
+        </select>
+        <button id="login">
+          <img src="./openstreetmap.svg" alt="OpenStreetMap Logo" width="22" height="22" />
+          Login with OpenStreetMap
+        </button>
+      </div>
+    </div>
+
+    <!-- Post authentication -->
+    <div id="postAuth" style="display: none;">
+      <div class="section status">
+        <div class="userinfo">
+          <span id="username"></span><button id="logout">Logout</button>
+        </div>
+        <div>
+          <span id="changesetId"></span>
+        </div>
+      </div>
+      <!-- Pre changeset creation -->
+      <div id="preCreation">
+        <div class="section">
+          <label>
+            Changeset's tag. The <code>comment</code> tag is required.
+            <textarea id="changesetTag" placeholder="comment=Added local cafes
+source=survey"></textarea>
+          </label>
+          <button id="create" disabled>Create Changeset</button>
+        </div>
+      </div>
+      <!-- Post changeset creation -->
+      <div id="postCreation" style="display: none;">
+        <div class="section">
+          <label>
+            Changeset file
+            <input type="file" id="changesetFile" accept=".osc,.xml">
+          </label>
+          <button id="upload" disabled>Upload</button>
+          <button id="close">Close Changeset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/honnip/osc-upload">Source</a>
+  </footer>
+
+
+  <script>
+    // @ts-check
+
+    // DOM Elements
+    const serverSelector = /** @type {HTMLSelectElement} */ (document.getElementById('server'));
+    const loginBtn = /** @type {HTMLButtonElement} */ (document.getElementById('login'));
+    const logoutBtn = /** @type {HTMLButtonElement} */ (document.getElementById('logout'));
+    const usernameDisplay = /** @type {HTMLSpanElement} */ (document.getElementById('username'));
+    const changesetIdDisplay = /** @type {HTMLSpanElement} */ (document.getElementById('changesetId'));
+    const changesetTags = /** @type {HTMLTextAreaElement} */ (document.getElementById('changesetTag'));
+    const oscFileInput = /** @type {HTMLInputElement} */ (document.getElementById('changesetFile'));
+    const createBtn = /** @type {HTMLButtonElement} */ (document.getElementById('create'));
+    const uploadBtn = /** @type {HTMLButtonElement} */ (document.getElementById('upload'));
+    const closeBtn = /** @type {HTMLButtonElement} */ (document.getElementById('close'));
+    const preAuth = /** @type {HTMLDivElement} */ (document.getElementById('preAuth'));
+    const postAuth = /** @type {HTMLDivElement} */ (document.getElementById('postAuth'));
+    const preCreation = /** @type {HTMLDivElement} */ (document.getElementById('preCreation'));
+    const postCreation = /** @type {HTMLDivElement} */ (document.getElementById('postCreation'));
+
+    // State
+    let IS_LOGGED_IN = window.localStorage.getItem('osm_auth_token') !== null;
+    let IS_CHANGESET_OPEN = window.localStorage.getItem('osm_changeset_id') !== null;
+
+    const render = async () => {
+      if (IS_LOGGED_IN) {
+        preAuth.style.display = 'none';
+        postAuth.style.display = 'block';
+        usernameDisplay.textContent = `Logged in as ${localStorage.getItem('osm_username')} on ${localStorage.getItem('osm_server')} server.`;
+      } else {
+        preAuth.style.display = 'block';
+        postAuth.style.display = 'none';
+        usernameDisplay.textContent = null;
+      }
+
+      if (IS_CHANGESET_OPEN) {
+        preCreation.style.display = 'none';
+        postCreation.style.display = 'block';
+        // @ts-ignore
+        const changesetUrl = `${serverConfigs[localStorage.getItem('osm_server')].osmUrl}/changeset/${localStorage.getItem('osm_changeset_id')}`;
+        changesetIdDisplay.innerHTML = `Changeset ID: <a href="${changesetUrl}" target="_blank">${localStorage.getItem('osm_changeset_id') || 'N/A'}</a>`;
+        oscFileInput.value = '';
+      } else {
+        preCreation.style.display = 'block';
+        postCreation.style.display = 'none';
+        changesetIdDisplay.textContent = null;
+        changesetTags.value = '';
+      }
+    };
+
+
+    /**
+     * @typedef {'production' | 'test'} ServerType
+     *
+     * @typedef {Object} ServerConfig
+     * @property {string} clientId - The client ID for the server.
+     * @property {string} osmUrl - The base URL for OpenStreetMap.
+     * @property {string} apiUrl - The API URL for OpenStreetMap.
+    */
+
+    /**
+     * @type {Record<ServerType, ServerConfig>}
+     */
+    const serverConfigs = {
+      // Register at https://www.openstreetmap.org/oauth2/applications
+      production: {
+        clientId: 'F7xC8Ag8d4rDGrQBbM2mVOw7etUUCQ27iZTLb0zIki4',
+        osmUrl: 'https://www.openstreetmap.org',
+        apiUrl: 'https://api.openstreetmap.org',
+      },
+      // Register at https://master.apis.dev.openstreetmap.org/oauth2/applications
+      test: {
+        clientId: "Wjn0m45286JFsUQzMnGy70vVZ9J5cxUvlg4xf_OCmcc",
+        osmUrl: 'https://master.apis.dev.openstreetmap.org',
+        apiUrl: 'https://master.apis.dev.openstreetmap.org',
+      }
+    };
+
+    /**
+     * @returns {Promise<string>}
+     */
+    const getAuthenticationCode = () => {
+      return new Promise((resolve, reject) => {
+        const channel = new BroadcastChannel('simple-osm-uploader-auth');
+        channel.onmessage = (event) => {
+          console.log('Received message from auth channel:', event.data);
+          if (event.data && event.data.type === 'auth') {
+            resolve(event.data.code);
+          } else {
+            reject(new Error('No authorization code received.'));
+          }
+          channel.close();
+        };
+      });
+    };
+
+    const handleLogin = async () => {
+      const REDIRECT_URL = "http://osc-upload.honnip.page/callback.html";
+      const SERVER_TYPE = /** @type {ServerType} */ (serverSelector.value);
+      const OSM_URL = serverConfigs[SERVER_TYPE].osmUrl;
+      const CLIENT_ID = serverConfigs[SERVER_TYPE].clientId;
+
+      // get access token
+      const authUrl = `${OSM_URL}/oauth2/authorize`;
+      const authParams = new URLSearchParams({
+        client_id: CLIENT_ID,
+        response_type: 'code',
+        redirect_uri: decodeURIComponent(REDIRECT_URL),
+        scope: 'read_prefs write_api'
+      });
+
+      // Open the login window
+      const settings = [
+        ['width', 550],
+        ['height', 600],
+        ['left', window.screen.width / 2 - 550 / 2],
+        ['top', window.screen.height / 2 - 600 / 2],
+      ]
+        .map(x => x.join('='))
+        .join(',');
+
+      const popup = window.open(`${authUrl}?${authParams.toString()}`, '_blank', settings);
+      if (!popup) {
+        console.error('Failed to open the login window.');
+        throw new Error('Popup blocked or failed to open.');
+      }
+
+      const channel = new BroadcastChannel('simple-osm-uploader-auth');
+
+      const authorizationCode = await getAuthenticationCode().catch(error => {
+        console.error(`Error receiving authorization code: ${error.message}`);
+        throw error;
+      });
+
+      // get access token
+      const tokenUrl = `${OSM_URL}/oauth2/token`;
+      const tokenParams = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: authorizationCode,
+        redirect_uri: decodeURIComponent(REDIRECT_URL),
+        client_id: CLIENT_ID
+      });
+
+      const request = new Request(`${tokenUrl}`, {
+        method: 'POST',
+        headers: new Headers({
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }),
+        body: tokenParams.toString()
+      });
+
+      /** @type {string|undefined} */
+      let accessToken = undefined;
+      try {
+        const response = await fetch(request);
+        if (!response.ok) {
+          throw new Error(`Failed to request access token: [${response.status}] ${response.statusText}`);
+        }
+        const data = await response.json();
+        accessToken = data.access_token;
+
+        if (!accessToken) {
+          throw new Error('No access token received.');
+        }
+      } catch (error) {
+        console.error(`Error during authentication: ${error.message}`);
+        throw error;
+      }
+
+      window.localStorage.setItem('osm_server', SERVER_TYPE);
+      window.localStorage.setItem('osm_auth_token', accessToken);
+      IS_LOGGED_IN = true;
+
+      const data = await (await Api('/api/0.6/user/details.json')).json();
+      const username = /** @type {string|null} */ (data?.user?.display_name);
+      if (!username) {
+        throw new Error('No username received.');
+      }
+      window.localStorage.setItem('osm_username', username);
+
+      render();
+    };
+
+    const handleLogout = async () => {
+      if (IS_CHANGESET_OPEN) {
+        await handleClose();
+      }
+      // store
+      window.localStorage.removeItem('osm_server');
+      window.localStorage.removeItem('osm_auth_token');
+      window.localStorage.removeItem('osm_username');
+      window.localStorage.removeItem('osm_changeset_id');
+
+      // state
+      IS_LOGGED_IN = false;
+      IS_CHANGESET_OPEN = false;
+
+      // DOM
+      usernameDisplay.textContent = null;
+      changesetIdDisplay.textContent = null;
+      changesetTags.value = '';
+      oscFileInput.value = '';
+
+      render();
+    };
+
+    const handleCreate = async () => {
+      if (!IS_LOGGED_IN) {
+        throw new Error('You must be logged in to create a changeset.');
+      }
+      if (!verifyChangesetTags()) {
+        throw new Error('The changeset tags are invalid. Please ensure the "comment" tag is present.');
+      }
+      createBtn.disabled = true; // Disable button to prevent multiple clicks
+
+      try {
+        const response = await Api('/api/0.6/changeset/create', 'PUT', generateChangesetXml(parsingChangesetTags(changesetTags.value)));
+        const changesetId = await response.text();
+        // verify
+        if (!changesetId || isNaN(parseInt(changesetId))) {
+          console.error('Invalid changeset ID received.');
+          throw new Error(changesetId || 'No changeset ID received.');
+        }
+
+        // set stores
+        window.localStorage.setItem('osm_changeset_id', changesetId);
+        IS_CHANGESET_OPEN = true;
+
+        render();
+      } catch (error) {
+        createBtn.disabled = false;
+        console.error(`Error creating changeset: ${error.message}`);
+        throw error;
+      }
+    };
+
+    const handleUpload = async () => {
+      try {
+        const file = oscFileInput.files?.item(0);
+        if (!file) {
+          throw new Error('No file selected.');
+        }
+
+        const osmchange = await file.text();
+
+        await uploadOsmChange(osmchange);
+        oscFileInput.value = '';
+      } catch (error) {
+        console.error(`Error during upload: ${error.message}`);
+        throw error;
+      }
+    };
+
+    const handleClose = async () => {
+      try {
+        const changesetId = window.localStorage.getItem('osm_changeset_id');
+        if (!changesetId) {
+          throw new Error('No changeset ID found. Please create a changeset first.');
+        }
+
+        const response = await Api(`/api/0.6/changeset/${changesetId}/close`, 'PUT');
+        if (!response.ok) {
+          throw new Error(`Failed to close changeset ${changesetId}: [${response.status}] ${response.statusText}`);
+        }
+
+        // Clear local storage
+        window.localStorage.removeItem('osm_changeset_id');
+        IS_CHANGESET_OPEN = false;
+
+        render();
+      } catch (error) {
+        console.error(`Error during closing changeset: ${error.message}`);
+        throw error;
+      }
+    };
+
+    const handleUploadButtonState = () => {
+      uploadBtn.disabled = !oscFileInput.files?.length;
+    };
+
+    const handleCreateButtonState = () => {
+      createBtn.disabled = !verifyChangesetTags();
+    };
+
+    /**
+     * @param {string} input - The input string containing changeset tags.
+     * @returns {Record<string, string>} An object with key-value pairs of tags.
+     */
+    function parsingChangesetTags(input) {
+      const tags = Object.fromEntries(
+        input.split('\n')
+          .filter((line) => line.includes('='))
+          .map(line => [line.slice(0, line.indexOf('=')).trim(), line.slice(line.indexOf('=') + 1).trim()])
+          .filter(([key, value]) => key && value)
+      );
+      return tags;
+    }
+
+    const verifyChangesetTags = () => {
+      const tags = parsingChangesetTags(changesetTags.value);
+      return tags.hasOwnProperty('comment');
+    };
+
+    /**
+     * @params {string} path - The API endpoint path to call.
+     * @params {string=} method - The HTTP method to use for the request.
+     * @params {string=} body - The body of the request.
+     */
+    const Api = async (path, method = 'GET', body) => {
+      if (!IS_LOGGED_IN) {
+        throw new Error('Not authenticated. Please log in first.');
+      }
+      const SERVER_TYPE = /** @type {ServerType} */ (window.localStorage.getItem('osm_server'));
+      const API_URL = serverConfigs[SERVER_TYPE].apiUrl;
+      const TOKEN = window.localStorage.getItem('osm_auth_token');
+
+      const request = new Request(`${API_URL}${path}`, {
+        method: method,
+        headers: new Headers({
+          'Authorization': `Bearer ${TOKEN}`,
+        }),
+        body: body
+      });
+
+      const response = await fetch(request);
+      if (!response.ok) {
+        throw new Error(`API request failed: [${response.status}] ${response.statusText}`);
+      }
+      return response;
+    };
+
+    /**
+     * @param {string} xml - The XML content of the changeset to upload.
+     * @returns {Promise<void>}
+     */
+    const uploadOsmChange = async (xml) => {
+      try {
+        const changesetId = window.localStorage.getItem('osm_changeset_id');
+        if (!changesetId) {
+          throw new Error('No changeset ID found. Please create a changeset first.');
+        }
+
+        const response = await Api(`/api/0.6/changeset/${changesetId}/upload`, 'POST', xml);
+        if (!response.ok) {
+          throw new Error(`Failed to upload to changeset ${changesetId}: [${response.status}] ${response.statusText}`);
+        }
+        console.log(`Uploaded to changeset ${changesetId} successfully`);
+      } catch (error) {
+        console.error(`Error during upload: ${error.message}`);
+        throw error;
+      }
+    };
+
+    /**
+     * @param {Record<string, string>} tags - The tags to include in the changeset
+     * @returns {string} The generated XML for the changeset
+     */
+    const generateChangesetXml = (tags) => {
+      const excludedKeys = ['created_by', 'host'];
+      const tagEntries = Object.entries(tags)
+        .filter(([key]) => !excludedKeys.includes(key))
+        // Use fixed values for created_by and host
+        .concat([
+          ['created_by', 'osc-upload git+https://github.com/honnip/osc-upload'],
+          ['host', 'https://osc-upload.honnip.page']
+        ])
+        .map(([key, value]) => `<tag k="${escapeXml(key)}" v="${escapeXml(value)}"/>`)
+        .join('');
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<osm>
+  <changeset>
+    ${tagEntries}
+  </changeset>
+</osm>`;
+    };
+
+    /**
+     * @param {string} unsafe - The string to escape
+     * @returns {string} The escaped string
+     */
+    const escapeXml = (unsafe) => {
+      return unsafe.replace(/[<>&'"]/g, (c) => {
+        switch (c) {
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '&': return '&amp;';
+          case '\'': return '&apos;';
+          case '"': return '&quot;';
+          default: return c;
+        }
+      });
+    };
+
+    // Initialize
+    render();
+    loginBtn.addEventListener('click', handleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+    changesetTags.addEventListener('input', handleCreateButtonState);
+    createBtn.addEventListener('click', handleCreate);
+    oscFileInput.addEventListener('change', handleUploadButtonState);
+    uploadBtn.addEventListener('click', handleUpload);
+    closeBtn.addEventListener('click', handleClose);
+
+    handleCreateButtonState();
+    handleUploadButtonState();
+  </script>
+</body>
+
+</html>

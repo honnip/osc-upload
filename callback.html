@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+
+<head></head>
+
+<body>
+  <script>
+    if (new URLSearchParams(location.search).has("code")) {
+      new BroadcastChannel("simple-osm-uploader-auth").postMessage({
+        type: "auth",
+        code: new URLSearchParams(location.search).get("code")
+      });
+      console.log("Authorization code sent to main window.");
+    }
+    window.close();
+  </script>
+</body>
+
+</html>
