@@ -528,7 +528,9 @@ source=survey"></textarea>
         const osmchange = await file.text();
 
         await uploadOsmChange(osmchange);
+
         oscFileInput.value = '';
+        handleUploadButtonState();
       } catch (error) {
         console.error(`Error during upload: ${error.message}`);
         throw error;
